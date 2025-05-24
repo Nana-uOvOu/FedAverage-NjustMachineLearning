@@ -9,6 +9,8 @@ class wzJNet(nn.Module):
         self.in_channel = in_channel
         self.in_size = in_size
         self.class_num = class_num
+        self.proto_dim = 512
+
 
         # 设计一个网络
         # 这3层，特征图尺寸不变，通道数改变，提取基本特征。
@@ -66,13 +68,14 @@ class wzJNet(nn.Module):
         self.fully_connected = nn.Linear(in_features=int(512 * in_size * in_size), out_features=class_num)
 
 
-    def forward(self, x):
+    def forward(self, x, proto = False):
         x = self.layer1(x)
         x = self.layer2(x) # 加上残差连接玩玩看
         x = self.layer3(x)
         # 忘了展开报错了 记得展开
-        x = x.reshape(x.shape[0], -1)
-        x = self.fully_connected(x)
+        if not proto:
+            x = x.reshape(x.shape[0], -1)
+            x = self.fully_connected(x)
         return x
 
 

@@ -10,6 +10,7 @@ class BaseClient():
     def __init__(self,
                  args,  # 需要输入参数
                  ):
+        self.index = -1
         self.epoches = args.client_epoches
         self.batch_size = args.batch_size
         self.learn_rate = args.learn_rate
@@ -35,17 +36,17 @@ class BaseClient():
         image_size = images.shape[2]
         # 创建模型
         if args.model == "wzj_net":
-            self.model = wzj.wzJNet(in_channels, image_size, len(self.dataloader.dataset.dataset.classes))
+            self.model = wzj.wzJNet(in_channels, image_size, len(self.dataloader.dataset.classes))
         elif args.model == "resnet18":
             self.model = models.resnet18(pretrained=False)
             # 修改最后分类层
             num_features = self.model.fc.in_features
-            self.model.fc = nn.Linear(num_features, len(self.dataloader.dataset.dataset.classes))
+            self.model.fc = nn.Linear(num_features, len(self.dataloader.dataset.classes))
         elif args.model == "VGG":
             self.model = models.vgg16(pretrained=False)
             # 修改最后的分类层（classifier 最后一层）
             num_features = self.model.classifier[6].in_features
-            self.model.classifier[6] = nn.Linear(num_features, len(self.dataloader.dataset.dataset.classes))
+            self.model.classifier[6] = nn.Linear(num_features, len(self.dataloader.dataset.classes))
         else:
             raise RuntimeError(f"{args.model} is not supported!!")
 
@@ -84,7 +85,7 @@ class BaseClient():
             # 每个 epoch 输出日志
             acc = 100 * correct / total
             avg_loss = total_loss / len(self.dataloader)
-            print(f"Epoch {epoch}/{self.epoches} - Loss: {avg_loss:.4f} - Acc: {acc:.2f}% Time cost: {time_2 - time_1:.2f}s")
+            print(f"[Client {self.index}]Epoch {epoch}/{self.epoches} - Loss: {avg_loss:.4f} - Acc: {acc:.2f}% Time cost: {time_2 - time_1:.2f}s")
 
 
 

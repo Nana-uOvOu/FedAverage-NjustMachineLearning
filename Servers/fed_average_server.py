@@ -21,7 +21,7 @@ class FedAverageServer(BaseServer):
     # 处理每一个客户端的连接
     def client_handler(self, client_socket, address, client_models, client_idx):
         # 首先给服务器分发初始模型
-        print("---------------Client Connected---------------")
+        print("---------------------------------------------Client Connected---------------------------------------------")
         print(f"Client {address} is connected! Index: {client_idx}")
 
         client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1024 * 1024 * 512)  # 发送缓冲区512MB
@@ -29,10 +29,15 @@ class FedAverageServer(BaseServer):
         client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # 关闭 Nagle 算法
 
         # 通知客户端的idx
-        client_socket.sendall(f"Index:{client_idx}".encode())
+        client_socket.sendall(struct.pack("!I", client_idx))
 
         # 向客户端分发全局模型
-        model_stream = gzip.compress(pickle.dumps(self.model.state_dict()))
+        # 将float32转换为float16，降低通信开销
+        state_dict = {
+            k: v.half() if v.dtype == torch.float32 else v
+            for k, v in self.model.state_dict().items()
+        }
+        model_stream = gzip.compress(pickle.dumps(state_dict))
         model_len = struct.pack("!I", len(model_stream)) # 强制发送4字节长度
         client_socket.sendall(model_len)
         client_socket.sendall(model_stream)
@@ -63,15 +68,14 @@ class FedAverageServer(BaseServer):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(("127.0.0.1", self.port))
         server.listen(self.max_client_num)
-        print(f"---------------Server Listening on port {self.port}---------------\n")
-
-
+        print(f"---------------------------------------------Server Listening on port {self.port}---------------------------------------------\n")
 
         # 进行global_epoch次全局训练
         accuracy_list = []
         loss_list = []
+        min_loss = 1e10
         for global_epoch in range(self.epochs):
-            print(f"---------------Global Epoch: {global_epoch}---------------")
+            print(f"---------------------------------------------Global Epoch: {global_epoch}---------------------------------------------")
             time_1 = time.time()
             client_models = [0] * self.max_client_num  # 存储所有客户端的模型
             threads = []    # 存储所有客户端的Thread
@@ -119,6 +123,22 @@ class FedAverageServer(BaseServer):
 
             accuracy_list.append(acc)
             loss_list.append(avg_loss)
+
+            # 早停：记录最低Loss值，连续early_stop_rounds次超过最低Loss就停止
+            if self.early_stop:
+                up_count = 0
+                stop_flag = False
+                for i in range(len(loss_list)-1,-1,-1):
+                    if min_loss >= loss_list[i]:
+                        min_loss = loss_list[i]
+                        break
+                    else:
+                        up_count += 1
+                    if up_count >= self.early_stop_rounds:
+                        stop_flag = True
+                        break
+                if stop_flag:
+                    break
         # 结束，保存数据并绘制图像
         path = self.save_path + "/model/" + self.model_name
         os.makedirs(path, exist_ok=True)
@@ -129,14 +149,14 @@ class FedAverageServer(BaseServer):
         # 绘制精准度图像
         # Loss 曲线
         plt.subplot(1, 2, 1)
-        plt.plot(range(1, self.epochs + 1), loss_list, marker='o')
+        plt.plot(range(1, len(loss_list) + 1), loss_list, marker='o')
         plt.title("Loss over Epochs")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
 
         # Accuracy 曲线
         plt.subplot(1, 2, 2)
-        plt.plot(range(1, self.epochs + 1), accuracy_list, marker='o')
+        plt.plot(range(1, len(accuracy_list) + 1), accuracy_list, marker='o')
         plt.title("Accuracy over Epochs")
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy (%)")
