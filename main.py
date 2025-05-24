@@ -49,14 +49,14 @@ def init_args():
     # 设置数据集信息
     parser.add_argument('--create_client_count', type=int, default=5) # 一次创建多少个client
     parser.add_argument('--dataset', type=str, default="CIFAR10")
-    parser.add_argument('--data_split_ratio', type=float, default=0.2)  # 每个客户端随机选取的data数
+    parser.add_argument('--data_split_ratio', type=float, default=0.8)  # 每个客户端随机选取的data数
     parser.add_argument('--noniid', type=bool, default=False)
     parser.add_argument('--noniid_classes', type=int, default=3)
     # 设置保存信息
     parser.add_argument('--save_path', type=str, default="./result")
     parser.add_argument('--load_model_path', type=str, default=None)
     parser.add_argument('--early_stop', type=bool, default=True)
-    parser.add_argument('--early_stop_rounds', type=int, default=5)
+    parser.add_argument('--early_stop_rounds', type=int, default=20)
     # 原型学习
     parser.add_argument('--proto', type=bool, default=False)
 
@@ -126,7 +126,8 @@ python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoch
 python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --device_id 1
 python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --device_id 2
 
-CIFAR100只需要修改--dataset 为CIFAR100即可
+CIFAR100
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --data_split_ratio 0.1 --device_id 1 
 
 noniid数据集：
 增加一个参数：--noniid True, 还要设置每个客户端的noniid类别数--noniid_classes 3(病理性采样，只选取noniid_classes个类别)

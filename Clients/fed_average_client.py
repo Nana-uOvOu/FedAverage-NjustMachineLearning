@@ -23,7 +23,6 @@ class FedAverageClient(BaseClient):
                 client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024 * 512)  # 接收缓冲区512MB
                 client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # 关闭 Nagle 算法
 
-
                 # 读取分配到的客户端序号
                 client_idx = client.recv(4)
                 self.index = struct.unpack("!I", client_idx)[0]  # 解包4字节长度字段

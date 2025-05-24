@@ -35,7 +35,7 @@ class FedProtoClient(BaseClient):
         return local_proto, feat_cnt
 
     # 自定义训练：加原型正则 (server_proto 在上一轮收到)
-    def train(self, server_proto=None, lam=0.1):
+    def train(self, server_proto=None, lam=0.3):
         total_loss = 0.0
         correct = 0
         total = 0
