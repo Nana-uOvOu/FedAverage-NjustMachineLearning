@@ -44,7 +44,13 @@ def get_sub_dataset(args):
                     k_cls = int(len(cls_indices) * data_split_ratio)
                     sampled = np.random.choice(cls_indices, k_cls, replace=False)
                     indices.extend(sampled)
-
+                # 若是proto方法，必须增加一些全局样本
+                if args.proto:
+                    for cls in range(total_classes):
+                        cls_indices = np.where(all_targets == cls)[0]
+                        k_cls = max(int(len(cls_indices) * 0.03),1)
+                        sampled = np.random.choice(cls_indices, k_cls, replace=False)
+                        indices.extend(sampled)
                 subset = Subset(train_dataset, indices)
 
             all_data = [subset[i] for i in range(len(subset))]  # 列表，每个元素是 (image, label)
@@ -100,6 +106,14 @@ def get_sub_dataset(args):
                     k_cls = int(len(cls_indices) * data_split_ratio)
                     sampled = np.random.choice(cls_indices, k_cls, replace=False)
                     indices.extend(sampled)
+
+                # 若是proto方法，必须增加一些全局样本
+                if args.proto:
+                    for cls in range(total_classes):
+                        cls_indices = np.where(all_targets == cls)[0]
+                        k_cls = max(int(len(cls_indices) * 0.03), 1)
+                        sampled = np.random.choice(cls_indices, k_cls, replace=False)
+                        indices.extend(sampled)
 
                 subset = Subset(train_dataset, indices)
             all_data = [subset[i] for i in range(len(subset))]  # 列表，每个元素是 (image, label)

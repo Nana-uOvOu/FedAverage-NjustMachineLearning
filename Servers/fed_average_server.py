@@ -174,12 +174,9 @@ class FedAverageServer(BaseServer):
     def aggregate(self,client_models):
             # 直接求平均，默认所有Client的样本数量一样。也可以使用加权平均。
             avg_model_dict = OrderedDict()
-
             for key in client_models[0].keys():
                 # 所有客户端对应 key 的张量相加求平均
                 avg_model_dict[key] = sum(d[key] for d in client_models) / self.max_client_num
-
-
             # 加载到全局模型中
             self.model.load_state_dict(avg_model_dict)
 

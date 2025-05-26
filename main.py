@@ -49,7 +49,7 @@ def init_args():
     # 设置数据集信息
     parser.add_argument('--create_client_count', type=int, default=5) # 一次创建多少个client
     parser.add_argument('--dataset', type=str, default="CIFAR10")
-    parser.add_argument('--data_split_ratio', type=float, default=0.8)  # 每个客户端随机选取的data数
+    parser.add_argument('--data_split_ratio', type=float, default=0.1)  # 每个客户端随机选取的data数
     parser.add_argument('--noniid', type=bool, default=False)
     parser.add_argument('--noniid_classes', type=int, default=3)
     # 设置保存信息
@@ -127,21 +127,23 @@ python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_po
 python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --device_id 2
 
 CIFAR100
+python main.py --role server --dataset CIFAR100 --server_port 8888 --global_epoches 200 --max_client_num 20 --device_id 1  
+
 python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --data_split_ratio 0.1 --device_id 1 
 
 noniid数据集：
 增加一个参数：--noniid True, 还要设置每个客户端的noniid类别数--noniid_classes 3(病理性采样，只选取noniid_classes个类别)
 对于CIFAR10: 
 python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoches 200 --early_stop_rounds 20 --device_id 1 
-python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --noniid True --noniid_classes 3 --device_id 1
-python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --noniid True --noniid_classes 3 --device_id 2
+python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --noniid True --noniid_classes 5 --device_id 1
+python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --noniid True --noniid_classes 5 --device_id 2
 
 对于CIFAR100：
-python main.py --role server --dataset CIFAR100 --server_port 8888 --global_epoches 200 --early_stop_rounds 10 --max_client_num 20 --device_id 1 
-python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 50 --data_split_ratio 0.4 --device_id 1
-python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 50 --data_split_ratio 0.4 --device_id 2
-python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 50 --data_split_ratio 0.4 --device_id 3
-python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 50 --data_split_ratio 0.4 --device_id 4
+python main.py --role server --dataset CIFAR100 --server_port 8888 --global_epoches 200 --early_stop_rounds 30 --max_client_num 20 --device_id 1 
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --device_id 1
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --device_id 2
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --device_id 3
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --device_id 4
 
 '''
 
@@ -150,13 +152,27 @@ python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_p
 不知道为什么，客户端连接时总会有几个线程连不上，所以10个客户端，建立3*4 = 12个，多两个更安全。
 CIFAR10 noniid
 服务器：
-python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoches 200 --early_stop_rounds 20 --proto True --device_id 1
+python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoches 200 --early_stop_rounds 30 --proto True --device_id 1
 客户端
-python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 4 --noniid True --noniid_classes 3 --proto True --device_id 1
+python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 4 --data_split_ratio 0.8 --noniid True --noniid_classes 5 --proto True --device_id 1
 
 python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 4 --noniid True --noniid_classes 3 --proto True --device_id 2
 
 python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 4 --noniid True --noniid_classes 3 --proto True --device_id 3
+
+CIFAR100 noniid
+服务器：
+python main.py --role server --dataset CIFAR100 --server_port 8888 --global_epoches 200 --early_stop_rounds 30 --max_client_num 20 --proto True --device_id 1
+
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 6 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --proto True --device_id 1
+
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 6 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --proto True --device_id 2
+
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 6 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --proto True --device_id 3
+
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 6 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --proto True --device_id 4
+
+python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 6 --noniid True --noniid_classes 35 --data_split_ratio 0.8 --proto True --device_id 5
 '''
 
 '''

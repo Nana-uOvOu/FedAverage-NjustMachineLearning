@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 
 class wzJNet(nn.Module):
@@ -76,6 +76,10 @@ class wzJNet(nn.Module):
         if not proto:
             x = x.reshape(x.shape[0], -1)
             x = self.fully_connected(x)
+        else:
+            # 使用平均池化并展平
+            x = F.adaptive_avg_pool2d(x, 1)  # (B, C, 1, 1)
+            x = x.view(x.size(0), -1)  # (B, C)
         return x
 
 

@@ -8,6 +8,7 @@ import pickle
 import struct
 import gzip
 import torch
+import torch.nn.functional as F
 import utils.read_data as read_data
 class FedProtoClient(BaseClient):
     def __init__(self, args, dataset):
@@ -45,26 +46,42 @@ class FedProtoClient(BaseClient):
             for x, y in self.dataloader:
                 x, y = x.to(self.device), y.to(self.device)
                 self.optimizer.zero_grad()
-                logits = self.model(x)
-                loss = self.criterion(logits, y)
-                # 原型正则
-                if server_proto:  # 字典非空才能用
-                    f = self.model.forward(x, proto=True)  # [B, d]
-                    mask = torch.tensor(
-                        [int(lbl.item()) in server_proto for lbl in y],
-                        device=self.device
-                    )  # True=有原型
-                    if mask.any():  # 至少有 1 个样本能用
-                        idx = mask.nonzero(as_tuple=True)[0]
-                        f_sel = f[idx]  # 取可用特征
-                        g_sel = torch.stack(
-                            [server_proto[int(y[i].item())] for i in idx]
-                        ).to(self.device)
-                        loss = loss + lam * torch.mean((f_sel - g_sel).pow(2))
+
+                targets = 0
+                # 原型最近邻 logits
+                f = self.model(x, proto=True)  # (B, d)
+                if server_proto:  # dict{cls:tensor}
+                    classes = sorted(server_proto.keys())
+                    proto_mat = torch.stack([server_proto[c] for c in classes]
+                                            ).to(self.device).detach()  # (C, d)
+                    logits = - torch.cdist(f, proto_mat) ** 2  # (B, C)
+
+                    idx_map = {c: i for i, c in enumerate(classes)}
+                    targets = torch.tensor([idx_map[int(t)] for t in y],
+                                           device=self.device)
+                    ce_loss = F.cross_entropy(logits, targets)
+
+
+                else:  # 首轮无原型时仍用本地 fc
+                    logits = self.model(x)  # 常规 fc
+                    ce_loss = self.criterion(logits, y)
+                    targets = y
+                # 原型对齐正则
+                mse_loss = 0.0
+                if server_proto:
+                    idx = [i for i, lbl in enumerate(y) if int(lbl) in server_proto]
+                    if idx:
+                        f_sel = f[idx]
+                        g_sel = torch.stack([server_proto[int(y[i])]
+                                             for i in idx]).to(self.device)
+                        mse_loss = torch.mean((f_sel - g_sel).abs())
+                loss = ce_loss + lam * mse_loss
+                # 反向与统计
                 loss.backward()
                 self.optimizer.step()
+
                 preds = logits.argmax(dim=1)  # 预测的类别索引
-                correct += (preds == y).sum().item()
+                correct += (preds == targets).sum().item()
                 total += y.size(0)
                 total_loss += loss.item()
             time_2 = time.time()
@@ -73,6 +90,8 @@ class FedProtoClient(BaseClient):
             avg_loss = total_loss / len(self.dataloader)
             print(
                 f"[Client {self.index}]Epoch {epoch + 1}/{self.epoches} - Loss: {avg_loss:.4f} - Acc: {acc:.2f}% Time cost: {time_2 - time_1:.2f}s")
+            correct, total = 0, 0
+            total_loss = 0
         # 进行全局测试
         total_loss = 0.0
         correct = 0
@@ -81,10 +100,36 @@ class FedProtoClient(BaseClient):
         self.model.eval()
         for x, y in self.test_dataloader:
             x, y = x.to(self.device), y.to(self.device)
-            y_pre = self.model(x)
-            loss = self.criterion(y_pre, y)
-            preds = y_pre.argmax(dim=1)  # 预测的类别索引
-            correct += (preds == y).sum().item()
+
+            targets = 0
+            # 原型最近邻 logits
+            f = self.model(x, proto=True)  # (B, d)
+            if server_proto:  # dict{cls:tensor}
+                classes = sorted(server_proto.keys())
+                idx_map = {c: i for i, c in enumerate(classes)}
+                targets = torch.tensor([idx_map[int(t)] for t in y],
+                                       device=self.device)
+                proto_mat = torch.stack([server_proto[c] for c in classes]
+                                        ).to(self.device)  # (C, d)
+                logits = - torch.cdist(f, proto_mat) ** 2  # (B, C)
+                ce_loss = F.cross_entropy(logits, targets)
+            else:
+                logits = self.model(x)
+                ce_loss = self.criterion(logits, y)
+                targets = y
+            # 原型对齐正则
+            mse_loss = 0.0
+            if server_proto:
+                idx = [i for i, lbl in enumerate(y) if int(lbl) in server_proto]
+                if idx:
+                    f_sel = f[idx]
+                    g_sel = torch.stack([server_proto[int(y[i])]
+                                         for i in idx]).to(self.device)
+                    mse_loss = torch.mean((f_sel - g_sel).pow(2))
+            loss = ce_loss + lam * mse_loss
+
+            preds = logits.argmax(dim=1)  # 预测的类别索引
+            correct += (preds == targets).sum().item()
             total += y.size(0)
             total_loss += loss.item()
         time_2 = time.time()
