@@ -1,21 +1,27 @@
 # 基于联邦学习的图像分类
 922127970152 王子骏
-**注意，由于tcp通信问题，训练过程中可能会存在客户端训练卡死，需要重新训练。**
+- **注意，由于tcp通信问题，训练过程中可能会存在客户端训练卡死，需要重新训练。**
 ## 安装需求库
-`pip install -r requirements.txt`
+1. `pip install -r requirements.txt`
+   - 其实只要有pytorch、matplotlib和numpy就能跑，没必要重新安装。
+   - 记得设置显卡的设备号，否则使用cpu。
+   - requirements.txt中没有pytorch下载安装，需要使用下面的指令下载。注意cuda版本需要对应。
+   - 如果pytorch报错，使用：`pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128`
+   - 我的torch版本是2.7.0+cu128
 ## 开始训练:IID数据
 使用下面指令启动服务器(注意：一次开太多线程(4个以上)会导致通信卡死,某几个线程永远无法继续运行！内存会溢出！如果要测试，请设置服务器max_client_num = 2，并设置客户端create_client_count=2)
+如果训练过程中卡住，请重新建立服务器+客户端。我的tcp通信不太稳定。
 1. IID数据，建立**服务器**:
    1. 使用CIFAR10, 需要10个客户端，自动监听8888端口
    2. 记得修改device id
    3. `python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoches 100 --device_id 1`
-   4. **如果只是想要测试代码能否跑通，请不要设置过多客户端，否则容易内存溢出，使用：**`python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoches 100 --max_client_num 2 --device_id 0`
+   4. **如果只是想要测试代码能否跑通，请不要设置过多客户端，否则容易内存溢出，使用最大2客户端的服务器：**`python main.py --role server --dataset CIFAR10 --server_port 8888 --global_epoches 100 --max_client_num 2 --device_id 0`
 2. IID数据，建立**客户端**：
    1. 使用服务器对应的CIFAR10，一次建立5个客户端，共2次，服务器IP默认为127.0.0.1
    2. 经过测试，CIFAR10大约在60轮左右过拟合
    3. **注意需要修改device id**
    4. 重复2次获取10个客户端：`python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 5 --device_id 1`
-   5. **仅供测试**：仅建立2个客户端`python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 2 --device_id 0`
+   5. **如果只是想要测试代码能否跑通，请不要设置过多客户端，否则容易内存溢出，创建2个客户端：**：仅建立2个客户端`python main.py --role client --dataset CIFAR10 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 1 --create_client_count 2 --device_id 0`
 3. CIFAR100只需要修改--dataset 为CIFAR100即可。若要复现文章中结果，需要：
    1. 服务器：`python main.py --role server --dataset CIFAR100 --server_port 8888 --global_epoches 200 --max_client_num 20 --device_id 1`
    2. 客户端，重复4次获取20个客户端，每次建立5个。注意，不要建立过多客户端线程，否则会卡死：`python main.py --role client --dataset CIFAR100 --server_ip 127.0.0.1 --server_port 8888 --client_epoches 3 --create_client_count 5 --data_split_ratio 0.1 --device_id 1`
